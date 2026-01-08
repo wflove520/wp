@@ -3,121 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>私有快传 - 极简文件分享</title>
+    <title>我的云文件</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; }
+        body { background-color: #f9fafb; }
+        .file-card:active { background-color: #f3f4f6; }
     </style>
 </head>
-<body class="flex items-center justify-center p-4">
+<body class="max-w-md mx-auto pb-20">
 
-    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-8">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">🚀 私有快传</h1>
-            <p class="text-gray-500 mt-2">安全、快速、即用即走</p>
-        </div>
+    <div class="sticky top-0 bg-white px-4 py-4 shadow-sm flex justify-between items-center z-10">
+        <h1 class="text-xl font-bold text-gray-800">云文件</h1>
+        <button onclick="fetchFiles()" class="text-blue-600 text-sm">刷新列表</button>
+    </div>
 
-        <div class="space-y-4">
-            <div class="border-2 border-dashed border-blue-200 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                <input type="file" id="fileSelector" class="hidden">
-                <label for="fileSelector" class="cursor-pointer">
-                    <div class="text-blue-500 mb-2">
-                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                    </div>
-                    <span id="fileNameDisplay" class="text-sm text-gray-600 italic">点击选择或拖拽文件</span>
-                </label>
-            </div>
-
-            <button onclick="handleUpload()" id="uploadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:bg-gray-400">
-                立即上传并生成链接
-            </button>
-        </div>
-
-        <div id="progressContainer" class="hidden mt-6">
-            <div class="flex justify-between mb-1 text-sm">
-                <span class="text-blue-600 font-medium">上传中...</span>
-                <span id="percentText" class="text-gray-500">0%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-                <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-            </div>
-        </div>
-
-        <div id="resultArea" class="hidden mt-8 p-4 bg-green-50 rounded-xl border border-green-100">
-            <p class="text-sm text-green-700 font-medium mb-2">✅ 文件已就绪：</p>
-            <div class="flex gap-2">
-                <input type="text" id="linkBox" readonly class="flex-1 bg-white border border-green-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none">
-                <button onclick="copyLink()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">复制</button>
+    <div class="m-4 p-6 bg-white rounded-2xl shadow-sm border border-dashed border-blue-300">
+        <input type="file" id="fileSelector" class="hidden" onchange="handleFileSelect()">
+        <label for="fileSelector" id="dropZone" class="cursor-pointer block text-center">
+            <div class="text-blue-500 text-4xl mb-2">＋</div>
+            <p id="statusText" class="text-sm text-gray-500">点击或拖拽上传新文件</p>
+        </label>
+        <div id="progressContainer" class="hidden mt-4">
+            <div class="w-full bg-gray-100 rounded-full h-1.5">
+                <div id="progressBar" class="bg-blue-600 h-1.5 rounded-full transition-all" style="width: 0%"></div>
             </div>
         </div>
     </div>
 
+    <div id="fileList" class="px-4 space-y-3">
+        <p class="text-center text-gray-400 py-10 text-sm">加载中...</p>
+    </div>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full text-sm hidden">链接已复制</div>
+
     <script>
-        // 修复：更改变量名避免与 SDK 全局变量冲突
+        // === 配置区 ===
         const S_URL = 'https://nmlzxbbwbquoedycfsee.supabase.co';
         const S_KEY = 'sb_publishable_YA7A9CBUpaYBdhm3UgLNVA_sZ9RjoZC';
         const client = supabase.createClient(S_URL, S_KEY);
+        const BUCKET_NAME = 'files';
 
-        // 显示选中的文件名
-        document.getElementById('fileSelector').addEventListener('change', function(e) {
-            const name = e.target.files[0]?.name || "点击选择或拖拽文件";
-            document.getElementById('fileNameDisplay').innerText = name;
-        });
+        // 页面加载自动获取列表
+        window.onload = fetchFiles;
 
-        async function handleUpload() {
-            const fileInput = document.getElementById('fileSelector');
-            const file = fileInput.files[0];
-            if (!file) return alert('请先选择文件！');
-
-            // UI 状态切换
-            const btn = document.getElementById('uploadBtn');
-            const progressContainer = document.getElementById('progressContainer');
-            const resultArea = document.getElementById('resultArea');
+        // 1. 获取并渲染文件列表
+        async function fetchFiles() {
+            const listEl = document.getElementById('fileList');
             
-            btn.disabled = true;
-            btn.innerText = '处理中...';
-            progressContainer.classList.remove('hidden');
-            resultArea.classList.add('hidden');
-
-            const fileName = `${Date.now()}_${file.name}`;
-
-            // 上传逻辑
-            const { data, error } = await client.storage
-                .from('files')
-                .upload(fileName, file, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
+            // list() 只能获取文件元数据，不能直接获取 URL
+            const { data, error } = await client.storage.from(BUCKET_NAME).list('', {
+                limit: 100,
+                sortBy: { column: 'created_at', order: 'desc' }
+            });
 
             if (error) {
-                alert('上传出错：' + error.message);
-                btn.disabled = false;
-                btn.innerText = '重新上传';
+                listEl.innerHTML = `<p class="text-red-500 text-sm">加载失败: ${error.message}</p>`;
                 return;
             }
 
-            // 模拟进度条（Supabase 基础 SDK 前端直传暂不支持原生 progress 回调，这里做个假进度效果或直接完成）
-            document.getElementById('progressBar').style.width = '100%';
-            document.getElementById('percentText').innerText = '100%';
+            if (data.length === 0) {
+                listEl.innerHTML = `<p class="text-gray-400 text-center py-10 text-sm">暂无文件</p>`;
+                return;
+            }
 
-            // 获取下载链接
-            const { data: urlData } = client.storage
-                .from('files')
-                .getPublicUrl(fileName);
+            listEl.innerHTML = data.map(file => {
+                // 获取公共链接
+                const { data: urlData } = client.storage.from(BUCKET_NAME).getPublicUrl(file.name);
+                const publicUrl = urlData.publicUrl;
+                const date = new Date(file.created_at).toLocaleString();
+                const size = (file.metadata.size / 1024 / 1024).toFixed(2) + ' MB';
 
-            // 显示结果
-            document.getElementById('linkBox').value = urlData.publicUrl;
-            resultArea.classList.remove('hidden');
-            btn.disabled = false;
-            btn.innerText = '继续上传其他文件';
+                return `
+                    <div class="bg-white p-4 rounded-xl shadow-sm flex items-center justify-between file-card">
+                        <div class="flex-1 min-w-0 pr-4">
+                            <h3 class="text-gray-800 font-medium truncate text-sm">${file.name.split('_').slice(1).join('_') || file.name}</h3>
+                            <p class="text-xs text-gray-400 mt-1">${date} · ${size}</p>
+                        </div>
+                        <button onclick="copyToClipboard('${publicUrl}')" class="text-blue-600 text-xs font-medium px-3 py-1 border border-blue-100 rounded-full hover:bg-blue-50">
+                            分享
+                        </button>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function copyLink() {
-            const copyText = document.getElementById("linkBox");
-            copyText.select();
-            document.execCommand("copy");
-            alert("链接已复制到剪贴板！");
+        // 2. 选择文件并立即上传
+        async function handleFileSelect() {
+            const fileInput = document.getElementById('fileSelector');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const statusText = document.getElementById('statusText');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+
+            statusText.innerText = '正在上传: ' + file.name;
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '30%';
+
+            // 生成唯一文件名（时间戳_原名）
+            const fileName = `${Date.now()}_${file.name}`;
+
+            const { data, error } = await client.storage
+                .from(BUCKET_NAME)
+                .upload(fileName, file);
+
+            if (error) {
+                alert('上传失败：' + error.message);
+                statusText.innerText = '点击重新上传';
+                progressContainer.classList.add('hidden');
+                return;
+            }
+
+            progressBar.style.width = '100%';
+            setTimeout(() => {
+                statusText.innerText = '上传成功！';
+                progressContainer.classList.add('hidden');
+                fileInput.value = ''; // 重置 input，方便下次上传
+                fetchFiles(); // 刷新列表
+            }, 500);
+        }
+
+        // 3. 复制功能
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.getElementById('toast');
+                toast.classList.remove('hidden');
+                setTimeout(() => toast.classList.add('hidden'), 2000);
+            });
         }
     </script>
 </body>
