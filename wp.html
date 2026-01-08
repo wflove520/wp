@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的简易云盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>🚀 我的私人快传</h1>
+    <input type="file" id="fileSelector">
+    <button onclick="upload()">上传并获取链接</button>
+
+    <div id="status"></div>
+    <div id="result"></div>
+
+    <script>
+        // 替换为你自己的 Supabase 配置
+        const SUPABASE_URL = '你的SUPABASE_URL';
+        const SUPABASE_KEY = '你的SUPABASE_ANON_KEY';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function upload() {
+            const fileInput = document.getElementById('fileSelector');
+            const file = fileInput.files[0];
+            if (!file) return alert('请先选择文件');
+
+            document.getElementById('status').innerText = '正在上传...';
+
+            // 1. 上传文件到 Supabase Storage
+            // 路径格式：文件名_随机数
+            const fileName = `${Date.now()}_${file.name}`;
+            const { data, error } = await supabase.storage
+                .from('files')
+                .upload(fileName, file);
+
+            if (error) {
+                console.error(error);
+                alert('上传失败');
+                return;
+            }
+
+            // 2. 获取公共下载链接
+            const { data: urlData } = supabase.storage
+                .from('files')
+                .getPublicUrl(fileName);
+
+            const downloadUrl = urlData.publicUrl;
+
+            document.getElementById('status').innerText = '上传成功！';
+            document.getElementById('result').innerHTML = `
+                <p>文件链接（有效期永久）：</p>
+                <input type="text" value="${downloadUrl}" id="linkBox" readonly>
+                <button onclick="copyLink()">复制</button>
+            `;
+        }
+
+        function copyLink() {
+            const copyText = document.getElementById("linkBox");
+            copyText.select();
+            document.execCommand("copy");
+            alert("链接已复制");
+        }
+    </script>
+</body>
+</html>
