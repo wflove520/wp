@@ -2,63 +2,122 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>我的简易云盘</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>私有快传 - 极简文件分享</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; }
+    </style>
 </head>
-<body>
-    <h1>🚀 我的私人快传</h1>
-    <input type="file" id="fileSelector">
-    <button onclick="upload()">上传并获取链接</button>
+<body class="flex items-center justify-center p-4">
 
-    <div id="status"></div>
-    <div id="result"></div>
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-xl p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">🚀 私有快传</h1>
+            <p class="text-gray-500 mt-2">安全、快速、即用即走</p>
+        </div>
+
+        <div class="space-y-4">
+            <div class="border-2 border-dashed border-blue-200 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                <input type="file" id="fileSelector" class="hidden">
+                <label for="fileSelector" class="cursor-pointer">
+                    <div class="text-blue-500 mb-2">
+                        <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    </div>
+                    <span id="fileNameDisplay" class="text-sm text-gray-600 italic">点击选择或拖拽文件</span>
+                </label>
+            </div>
+
+            <button onclick="handleUpload()" id="uploadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-lg disabled:bg-gray-400">
+                立即上传并生成链接
+            </button>
+        </div>
+
+        <div id="progressContainer" class="hidden mt-6">
+            <div class="flex justify-between mb-1 text-sm">
+                <span class="text-blue-600 font-medium">上传中...</span>
+                <span id="percentText" class="text-gray-500">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div id="resultArea" class="hidden mt-8 p-4 bg-green-50 rounded-xl border border-green-100">
+            <p class="text-sm text-green-700 font-medium mb-2">✅ 文件已就绪：</p>
+            <div class="flex gap-2">
+                <input type="text" id="linkBox" readonly class="flex-1 bg-white border border-green-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none">
+                <button onclick="copyLink()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">复制</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // 替换为你自己的 Supabase 配置
-        const SUPABASE_URL = 'https://nmlzxbbwbquoedycfsee.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_YA7A9CBUpaYBdhm3UgLNVA_sZ9RjoZC';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // 修复：更改变量名避免与 SDK 全局变量冲突
+        const S_URL = 'https://nmlzxbbwbquoedycfsee.supabase.co';
+        const S_KEY = 'sb_publishable_YA7A9CBUpaYBdhm3UgLNVA_sZ9RjoZC';
+        const client = supabase.createClient(S_URL, S_KEY);
 
-        async function upload() {
+        // 显示选中的文件名
+        document.getElementById('fileSelector').addEventListener('change', function(e) {
+            const name = e.target.files[0]?.name || "点击选择或拖拽文件";
+            document.getElementById('fileNameDisplay').innerText = name;
+        });
+
+        async function handleUpload() {
             const fileInput = document.getElementById('fileSelector');
             const file = fileInput.files[0];
-            if (!file) return alert('请先选择文件');
+            if (!file) return alert('请先选择文件！');
 
-            document.getElementById('status').innerText = '正在上传...';
+            // UI 状态切换
+            const btn = document.getElementById('uploadBtn');
+            const progressContainer = document.getElementById('progressContainer');
+            const resultArea = document.getElementById('resultArea');
+            
+            btn.disabled = true;
+            btn.innerText = '处理中...';
+            progressContainer.classList.remove('hidden');
+            resultArea.classList.add('hidden');
 
-            // 1. 上传文件到 Supabase Storage
-            // 路径格式：文件名_随机数
             const fileName = `${Date.now()}_${file.name}`;
-            const { data, error } = await supabase.storage
+
+            // 上传逻辑
+            const { data, error } = await client.storage
                 .from('files')
-                .upload(fileName, file);
+                .upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
 
             if (error) {
-                console.error(error);
-                alert('上传失败');
+                alert('上传出错：' + error.message);
+                btn.disabled = false;
+                btn.innerText = '重新上传';
                 return;
             }
 
-            // 2. 获取公共下载链接
-            const { data: urlData } = supabase.storage
+            // 模拟进度条（Supabase 基础 SDK 前端直传暂不支持原生 progress 回调，这里做个假进度效果或直接完成）
+            document.getElementById('progressBar').style.width = '100%';
+            document.getElementById('percentText').innerText = '100%';
+
+            // 获取下载链接
+            const { data: urlData } = client.storage
                 .from('files')
                 .getPublicUrl(fileName);
 
-            const downloadUrl = urlData.publicUrl;
-
-            document.getElementById('status').innerText = '上传成功！';
-            document.getElementById('result').innerHTML = `
-                <p>文件链接（有效期永久）：</p>
-                <input type="text" value="${downloadUrl}" id="linkBox" readonly>
-                <button onclick="copyLink()">复制</button>
-            `;
+            // 显示结果
+            document.getElementById('linkBox').value = urlData.publicUrl;
+            resultArea.classList.remove('hidden');
+            btn.disabled = false;
+            btn.innerText = '继续上传其他文件';
         }
 
         function copyLink() {
             const copyText = document.getElementById("linkBox");
             copyText.select();
             document.execCommand("copy");
-            alert("链接已复制");
+            alert("链接已复制到剪贴板！");
         }
     </script>
 </body>
