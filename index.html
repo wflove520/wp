@@ -3,43 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的极速盘 - 安全分享</title>
+    <title>我的私人云盘 Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
 
-    <div id="redirect-view" class="hidden max-w-md w-full text-center bg-white p-10 rounded-3xl shadow-xl">
-        <div id="status-icon" class="text-6xl mb-4">🚀</div>
-        <h2 id="status-title" class="text-2xl font-bold text-slate-800 mb-2">正在为您跳转下载...</h2>
-        <p id="status-desc" class="text-slate-500 text-sm">正在连接至阿里云高速通道</p>
-        <div id="timer" class="mt-4 text-blue-500 font-mono font-bold">3s</div>
+    <div id="redirect-view" class="hidden flex flex-col items-center justify-center min-h-screen p-4 text-center">
+        <div class="bg-white p-8 rounded-3xl shadow-xl max-w-sm w-full">
+            <div id="status-icon" class="text-6xl mb-4">⏳</div>
+            <h2 id="status-title" class="text-xl font-bold mb-2">安全检测中...</h2>
+            <p id="status-desc" class="text-gray-500 text-sm mb-4">正在验证链接有效性</p>
+            <div id="countdown" class="text-3xl font-mono font-bold text-blue-600 hidden">3</div>
+        </div>
     </div>
 
-    <div id="admin-view" class="hidden max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
-        <div class="mb-6">
-            <h1 class="text-2xl font-black text-slate-800">🛠️ 链接生成器</h1>
-            <p class="text-xs text-slate-400 mt-1">为 ModelScope 文件设置自定义有效期</p>
-        </div>
-
-        <div class="space-y-4">
+    <div id="admin-view" class="hidden max-w-2xl mx-auto p-4 py-8">
+        <div class="flex justify-between items-center mb-6">
             <div>
-                <label class="text-xs font-bold text-slate-500 ml-1">ModelScope 文件名</label>
-                <input type="text" id="fileName" placeholder="例如: libil2cpp.so" class="w-full mt-1 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 ring-blue-500">
+                <h1 class="text-2xl font-black text-gray-900">☁️ 我的云盘</h1>
+                <p class="text-xs text-gray-400">ModelScope 直连 · 智能限时分享</p>
             </div>
-            <div>
-                <label class="text-xs font-bold text-slate-500 ml-1">设置有效期至</label>
-                <input type="date" id="expiryDate" class="w-full mt-1 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 ring-blue-500">
-            </div>
-            
-            <button onclick="generateLink()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-100 active:scale-95 transition-all">
-                生成安全分享链接
+            <button onclick="loadFileList()" class="bg-white p-2 rounded-full shadow-sm hover:shadow-md transition-all active:scale-95">
+                🔄
             </button>
         </div>
 
-        <div id="result" class="hidden mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-            <p class="text-[10px] font-bold text-blue-600 mb-2 uppercase">生成的加密分享链接：</p>
-            <input type="text" id="shareLink" readonly class="w-full bg-white border border-blue-200 p-3 rounded-xl text-xs text-slate-600 outline-none">
-            <button onclick="copyShareLink()" class="w-full bg-blue-600 text-white mt-3 py-3 rounded-xl text-xs font-bold active:scale-95">复制链接</button>
+        <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden min-h-[400px]">
+            <div id="loading" class="flex flex-col items-center justify-center h-64 text-gray-400">
+                <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full loading mb-2"></div>
+                <p class="text-xs">正在连接数据仓库...</p>
+            </div>
+            
+            <div id="file-list" class="hidden divide-y divide-gray-50">
+                </div>
+        </div>
+
+        <div id="share-modal" class="fixed inset-0 bg-black/40 hidden items-end sm:items-center justify-center z-50 backdrop-blur-sm transition-all">
+            <div class="bg-white w-full sm:w-96 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl transform transition-transform translate-y-full sm:translate-y-0" id="modal-panel">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-lg">创建分享链接</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                
+                <div class="bg-blue-50 p-3 rounded-xl mb-4 flex items-center gap-3">
+                    <div class="bg-blue-100 p-2 rounded-lg text-xl">📄</div>
+                    <div class="overflow-hidden">
+                        <p class="text-xs text-blue-500 font-bold uppercase">已选文件</p>
+                        <p id="selected-filename" class="text-sm font-medium truncate text-blue-900">game.zip</p>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500 mb-2 font-bold ml-1">选择有效期：</p>
+                <div class="grid grid-cols-3 gap-2 mb-4">
+                    <button onclick="setExpiry('10m')" class="time-btn border border-gray-200 py-2 rounded-xl text-xs font-medium hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-600 focus:text-white transition-colors">⚡ 10分钟</button>
+                    <button onclick="setExpiry('1d')" class="time-btn border border-gray-200 py-2 rounded-xl text-xs font-medium hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-600 focus:text-white transition-colors">📅 1 天</button>
+                    <button onclick="setExpiry('7d')" class="time-btn border border-gray-200 py-2 rounded-xl text-xs font-medium hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-600 focus:text-white transition-colors">🗓️ 7 天</button>
+                    <button onclick="setExpiry('30d')" class="time-btn border border-gray-200 py-2 rounded-xl text-xs font-medium hover:bg-blue-50 hover:border-blue-300 focus:bg-blue-600 focus:text-white transition-colors">📆 1 个月</button>
+                    <button onclick="setExpiry('forever')" class="time-btn col-span-2 border border-green-200 text-green-700 bg-green-50 py-2 rounded-xl text-xs font-bold hover:bg-green-100 focus:bg-green-600 focus:text-white transition-colors">∞ 永久有效</button>
+                </div>
+
+                <div id="result-area" class="hidden animate-pulse">
+                    <input type="text" id="final-link" readonly class="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl text-xs text-gray-600 outline-none mb-2" onclick="this.select()">
+                    <button onclick="copyLink()" class="w-full bg-black text-white py-3 rounded-xl font-bold text-sm hover:bg-gray-800 active:scale-95 transition-transform">复制链接并关闭</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -47,79 +81,158 @@
         // === 配置区 ===
         const MS_BASE = "https://www.modelscope.cn/datasets/wflove520/my_disk_001/resolve/master/";
 
+        // 页面入口
         window.onload = function() {
-            // 使用 URLSearchParams 解析参数
             const params = new URLSearchParams(window.location.search);
-            const f = params.get('f'); // 文件名
-            const e = params.get('e'); // 过期日期
+            const f = params.get('f');
+            const e = params.get('e');
 
             if (f && e) {
-                showRedirectView(f, e);
+                handleRedirect(f, e);
             } else {
-                showAdminView();
+                showAdmin();
             }
         };
 
-        // --- 跳转逻辑 ---
-        function showRedirectView(file, expiry) {
-            const view = document.getElementById('redirect-view');
+        // ================= 逻辑部分：跳转 =================
+        function handleRedirect(file, expiryTs) {
+            document.getElementById('redirect-view').classList.remove('hidden');
+            const now = Date.now();
+            const exp = parseInt(expiryTs);
+            const icon = document.getElementById('status-icon');
             const title = document.getElementById('status-title');
             const desc = document.getElementById('status-desc');
-            const icon = document.getElementById('status-icon');
-            const timer = document.getElementById('timer');
-            view.classList.remove('hidden');
+            const count = document.getElementById('countdown');
 
-            const now = new Date();
-            const expDate = new Date(expiry + " 23:59:59");
+            // 1. 检查是否过期
+            if (now > exp) {
+                icon.innerText = "🛑";
+                title.innerText = "链接已失效";
+                title.className = "text-xl font-bold mb-2 text-red-600";
+                desc.innerText = "该文件的分享期限已过，无法访问。";
+                return;
+            }
 
-            // 检查日期是否有效
-            if (now > expDate) {
-                icon.innerText = "⚠️";
-                title.innerText = "链接已过期";
-                title.classList.add('text-red-500');
-                desc.innerText = "该分享链接的有效期至 " + expiry;
-                timer.classList.add('hidden');
-            } else {
-                let count = 3;
-                const interval = setInterval(() => {
-                    count--;
-                    timer.innerText = count + "s";
-                    if (count <= 0) {
-                        clearInterval(interval);
-                        // 跳转到阿里直链
-                        window.location.href = MS_BASE + encodeURIComponent(file);
-                    }
-                }, 1000);
+            // 2. 正常跳转
+            icon.innerText = "🚀";
+            title.innerText = "准备下载...";
+            desc.innerText = "正在建立极速连接";
+            count.classList.remove('hidden');
+
+            let timer = 3;
+            const interval = setInterval(() => {
+                timer--;
+                count.innerText = timer;
+                if (timer <= 0) {
+                    clearInterval(interval);
+                    window.location.href = MS_BASE + encodeURIComponent(file);
+                }
+            }, 1000);
+        }
+
+        // ================= 逻辑部分：管理 =================
+        function showAdmin() {
+            document.getElementById('admin-view').classList.remove('hidden');
+            loadFileList();
+        }
+
+        async function loadFileList() {
+            const listEl = document.getElementById('file-list');
+            const loading = document.getElementById('loading');
+            
+            listEl.innerHTML = '';
+            listEl.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            try {
+                // 调用我们刚才写的 API
+                const res = await fetch('/api/list');
+                const files = await res.json();
+
+                if (!files || files.length === 0) throw new Error("空仓库");
+
+                loading.classList.add('hidden');
+                listEl.classList.remove('hidden');
+
+                listEl.innerHTML = files.map(file => {
+                    // 格式化大小
+                    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+                    return `
+                        <div onclick="openShareModal('${file.name}')" class="p-4 hover:bg-blue-50 cursor-pointer flex items-center justify-between transition-colors group">
+                            <div class="flex items-center gap-3 overflow-hidden">
+                                <div class="bg-gray-100 p-2 rounded-lg text-lg group-hover:bg-blue-200 transition-colors">📂</div>
+                                <div class="min-w-0">
+                                    <h3 class="text-sm font-bold text-gray-700 truncate">${file.name}</h3>
+                                    <p class="text-[10px] text-gray-400">${sizeMB} MB · ${file.date}</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-300 group-hover:text-blue-500">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                loading.innerHTML = `<p class="text-red-400">加载失败，请检查 api/list.js</p>`;
             }
         }
 
-        // --- 管理逻辑 ---
-        function showAdminView() {
-            document.getElementById('admin-view').classList.remove('hidden');
-            // 默认日期设为明天
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            document.getElementById('expiryDate').value = tomorrow.toISOString().split('T')[0];
+        // --- 弹窗逻辑 ---
+        let currentFile = '';
+
+        function openShareModal(filename) {
+            currentFile = filename;
+            document.getElementById('selected-filename').innerText = filename;
+            document.getElementById('share-modal').classList.remove('hidden');
+            document.getElementById('share-modal').classList.add('flex');
+            
+            // 动画
+            setTimeout(() => {
+                document.getElementById('modal-panel').classList.remove('translate-y-full');
+            }, 10);
+            
+            // 重置状态
+            document.getElementById('result-area').classList.add('hidden');
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white', 'bg-green-600'));
         }
 
-        function generateLink() {
-            const f = document.getElementById('fileName').value.trim();
-            const e = document.getElementById('expiryDate').value;
-            if (!f) return alert("请输入文件名！");
+        function closeModal() {
+            document.getElementById('modal-panel').classList.add('translate-y-full');
+            setTimeout(() => {
+                document.getElementById('share-modal').classList.add('hidden');
+                document.getElementById('share-modal').classList.remove('flex');
+            }, 300);
+        }
 
-            // 获取当前页面的基础 URL
+        function setExpiry(type) {
+            const now = Date.now();
+            let expiryTime = 0;
+
+            // 计算时间戳
+            switch(type) {
+                case '10m': expiryTime = now + (10 * 60 * 1000); break;
+                case '1d':  expiryTime = now + (24 * 60 * 60 * 1000); break;
+                case '7d':  expiryTime = now + (7 * 24 * 60 * 60 * 1000); break;
+                case '30d': expiryTime = now + (30 * 24 * 60 * 60 * 1000); break;
+                case 'forever': expiryTime = now + (100 * 365 * 24 * 60 * 60 * 1000); break; // 100年
+            }
+
+            // 生成链接
             const base = window.location.origin + window.location.pathname;
-            const finalLink = `${base}?f=${encodeURIComponent(f)}&e=${e}`;
+            // 链接格式：域名/?f=文件名&e=过期时间戳
+            const link = `${base}?f=${encodeURIComponent(currentFile)}&e=${expiryTime}`;
 
-            document.getElementById('shareLink').value = finalLink;
-            document.getElementById('result').classList.remove('hidden');
+            document.getElementById('final-link').value = link;
+            document.getElementById('result-area').classList.remove('hidden');
         }
 
-        function copyShareLink() {
-            const input = document.getElementById('shareLink');
+        function copyLink() {
+            const input = document.getElementById('final-link');
             input.select();
             document.execCommand('copy');
-            alert("链接已复制，现在可以发给别人了！");
+            alert('复制成功！');
+            closeModal();
         }
     </script>
 </body>
