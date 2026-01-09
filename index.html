@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的极速盘 - 安全分享</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+
+    <div id="redirect-view" class="hidden max-w-md w-full text-center bg-white p-10 rounded-3xl shadow-xl">
+        <div id="status-icon" class="text-6xl mb-4">🚀</div>
+        <h2 id="status-title" class="text-2xl font-bold text-slate-800 mb-2">正在为您跳转下载...</h2>
+        <p id="status-desc" class="text-slate-500 text-sm">正在连接至阿里云高速通道</p>
+        <div id="timer" class="mt-4 text-blue-500 font-mono font-bold">3s</div>
+    </div>
+
+    <div id="admin-view" class="hidden max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+        <div class="mb-6">
+            <h1 class="text-2xl font-black text-slate-800">🛠️ 链接生成器</h1>
+            <p class="text-xs text-slate-400 mt-1">为 ModelScope 文件设置自定义有效期</p>
+        </div>
+
+        <div class="space-y-4">
+            <div>
+                <label class="text-xs font-bold text-slate-500 ml-1">ModelScope 文件名</label>
+                <input type="text" id="fileName" placeholder="例如: libil2cpp.so" class="w-full mt-1 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 ring-blue-500">
+            </div>
+            <div>
+                <label class="text-xs font-bold text-slate-500 ml-1">设置有效期至</label>
+                <input type="date" id="expiryDate" class="w-full mt-1 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm outline-none focus:ring-2 ring-blue-500">
+            </div>
+            
+            <button onclick="generateLink()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-100 active:scale-95 transition-all">
+                生成安全分享链接
+            </button>
+        </div>
+
+        <div id="result" class="hidden mt-8 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+            <p class="text-[10px] font-bold text-blue-600 mb-2 uppercase">生成的加密分享链接：</p>
+            <input type="text" id="shareLink" readonly class="w-full bg-white border border-blue-200 p-3 rounded-xl text-xs text-slate-600 outline-none">
+            <button onclick="copyShareLink()" class="w-full bg-blue-600 text-white mt-3 py-3 rounded-xl text-xs font-bold active:scale-95">复制链接</button>
+        </div>
+    </div>
+
+    <script>
+        // === 配置区 ===
+        const MS_BASE = "https://www.modelscope.cn/datasets/wflove520/my_disk_001/resolve/master/";
+
+        window.onload = function() {
+            // 使用 URLSearchParams 解析参数
+            const params = new URLSearchParams(window.location.search);
+            const f = params.get('f'); // 文件名
+            const e = params.get('e'); // 过期日期
+
+            if (f && e) {
+                showRedirectView(f, e);
+            } else {
+                showAdminView();
+            }
+        };
+
+        // --- 跳转逻辑 ---
+        function showRedirectView(file, expiry) {
+            const view = document.getElementById('redirect-view');
+            const title = document.getElementById('status-title');
+            const desc = document.getElementById('status-desc');
+            const icon = document.getElementById('status-icon');
+            const timer = document.getElementById('timer');
+            view.classList.remove('hidden');
+
+            const now = new Date();
+            const expDate = new Date(expiry + " 23:59:59");
+
+            // 检查日期是否有效
+            if (now > expDate) {
+                icon.innerText = "⚠️";
+                title.innerText = "链接已过期";
+                title.classList.add('text-red-500');
+                desc.innerText = "该分享链接的有效期至 " + expiry;
+                timer.classList.add('hidden');
+            } else {
+                let count = 3;
+                const interval = setInterval(() => {
+                    count--;
+                    timer.innerText = count + "s";
+                    if (count <= 0) {
+                        clearInterval(interval);
+                        // 跳转到阿里直链
+                        window.location.href = MS_BASE + encodeURIComponent(file);
+                    }
+                }, 1000);
+            }
+        }
+
+        // --- 管理逻辑 ---
+        function showAdminView() {
+            document.getElementById('admin-view').classList.remove('hidden');
+            // 默认日期设为明天
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('expiryDate').value = tomorrow.toISOString().split('T')[0];
+        }
+
+        function generateLink() {
+            const f = document.getElementById('fileName').value.trim();
+            const e = document.getElementById('expiryDate').value;
+            if (!f) return alert("请输入文件名！");
+
+            // 获取当前页面的基础 URL
+            const base = window.location.origin + window.location.pathname;
+            const finalLink = `${base}?f=${encodeURIComponent(f)}&e=${e}`;
+
+            document.getElementById('shareLink').value = finalLink;
+            document.getElementById('result').classList.remove('hidden');
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('shareLink');
+            input.select();
+            document.execCommand('copy');
+            alert("链接已复制，现在可以发给别人了！");
+        }
+    </script>
+</body>
+</html>
