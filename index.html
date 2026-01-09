@@ -3,177 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HF 极速云传</title>
+    <title>我的私人云盘</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
-        .progress-ani { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        body { background: #f8fafc; font-family: sans-serif; }
+        .mask-box { -webkit-text-security: disc; }
     </style>
 </head>
-<body class="max-w-2xl mx-auto pb-10">
+<body class="max-w-md mx-auto min-h-screen p-4 flex flex-col items-center justify-center">
 
-    <div class="sticky top-0 z-50 glass border-b border-gray-200 px-5 py-4 flex justify-between items-center">
-        <div>
-            <h1 class="text-xl font-bold text-gray-900">☁️ 我的云文件</h1>
-            <p class="text-[10px] text-gray-400 uppercase tracking-widest">Hugging Face Backend</p>
+    <div class="bg-white rounded-3xl shadow-xl w-full p-6 space-y-6">
+        
+        <div class="text-center space-y-1">
+            <h1 class="text-2xl font-extrabold text-slate-800">☁️ 私有极速快传</h1>
+            <p class="text-xs text-slate-400">存储于 GitHub Releases · 2GB/文件 · 国内不限速</p>
         </div>
-        <button onclick="loadFileList()" class="p-2 hover:bg-gray-100 rounded-full transition">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-        </button>
-    </div>
 
-    <div class="m-4 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 text-center">
-        <input type="file" id="filePicker" class="hidden" onchange="handleUpload()">
-        <label for="filePicker" class="group cursor-pointer">
-            <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2" stroke-linecap="round"/></svg>
-            </div>
-            <h2 class="text-gray-700 font-bold">点击上传大文件</h2>
-            <p class="text-gray-400 text-sm mt-1">支持 600MB+ 文件直传</p>
-        </label>
+        <div class="hidden">
+            <input type="text" id="repo_path" value="wflove520/wp">
+            <input type="text" id="gh_token" value="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">
+        </div>
 
-        <div id="uploadBox" class="hidden mt-6">
-            <div class="flex justify-between text-xs mb-2">
-                <span id="uploadInfo" class="text-blue-600 font-medium">准备上传...</span>
-                <span id="percentText" class="text-gray-400">0%</span>
+        <div class="border-2 border-dashed border-blue-200 bg-blue-50/50 rounded-2xl p-10 text-center hover:border-blue-500 hover:bg-blue-50 transition-all relative group cursor-pointer">
+            <input type="file" id="fileInput" class="absolute inset-0 opacity-0 cursor-pointer z-10" onchange="handleUpload()">
+            
+            <div class="transform transition-transform group-hover:scale-110 duration-300 text-5xl mb-3">
+                📤
             </div>
-            <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                <div id="progressBar" class="bg-blue-500 h-full w-0 progress-ani"></div>
+            <p id="statusMsg" class="text-slate-600 font-bold text-sm">点击选择文件</p>
+            <p class="text-slate-400 text-xs mt-1">支持 600MB+ 大文件直传</p>
+        </div>
+
+        <div id="progressArea" class="hidden space-y-2">
+            <div class="flex justify-between text-xs text-slate-500 font-medium">
+                <span id="speed">正在连接...</span>
+                <span id="percent">0%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <div id="progressBar" class="bg-blue-600 h-full w-0 transition-all duration-200 shadow-[0_0_10px_rgba(37,99,235,0.5)]"></div>
+            </div>
+        </div>
+
+        <div id="resultArea" class="hidden bg-green-50 p-4 rounded-xl border border-green-200 animate-fade-in">
+            <div class="flex items-center gap-2 mb-2">
+                <div class="bg-green-100 p-1 rounded-full text-green-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <p class="text-xs font-bold text-green-800">上传成功！加速链接已生成</p>
+            </div>
+            
+            <div class="flex gap-2">
+                <input type="text" id="finalLink" readonly class="flex-1 bg-white p-2 text-xs rounded-lg border border-green-200 text-slate-600 outline-none focus:border-green-500">
+                <button onclick="copyLink()" class="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-lg shadow-green-200 active:scale-95 transition-all">复制</button>
             </div>
         </div>
     </div>
 
-    <div class="mx-4 mb-4 flex items-center justify-between bg-blue-50 p-3 rounded-xl border border-blue-100">
-        <span class="text-sm text-blue-700 font-medium italic">🚀 开启国内下载加速</span>
-        <input type="checkbox" id="useMirror" checked class="w-5 h-5 accent-blue-600 cursor-pointer">
-    </div>
-
-    <div id="fileList" class="px-4 space-y-3">
-        <div class="animate-pulse flex flex-col items-center py-20">
-            <div class="h-10 w-10 bg-gray-200 rounded-full mb-4"></div>
-            <div class="h-4 w-32 bg-gray-200 rounded"></div>
-        </div>
-    </div>
-
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 glass px-6 py-3 rounded-full shadow-2xl text-sm font-bold text-gray-800 hidden z-50"></div>
+    <p class="fixed bottom-4 text-[10px] text-slate-300 text-center w-full">
+        Current Repo: wflove520/wp (Private)
+    </p>
 
     <script>
-        // === 配置中心 ===
-        const HF_USER = "best520";
-        const HF_REPO = "my-storage";
-        const HF_TOKEN = "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"; // 重要：请填入你的 Write Token
-
-        // === 1. 初始化列表 ===
-        window.onload = loadFileList;
-
-        async function loadFileList() {
-            const listEl = document.getElementById('fileList');
-            try {
-                // 调用 HF API 获取仓库文件树
-                const res = await fetch(`https://huggingface.co/api/datasets/${HF_USER}/${HF_REPO}/tree/main`);
-                if (!res.ok) throw new Error("无法读取列表，请检查 Token 或仓库是否公开");
-                const files = await res.json();
-
-                // 过滤掉系统文件 (.gitattributes)
-                const validFiles = files.filter(f => f.type === 'file' && f.path !== '.gitattributes');
-
-                if (validFiles.length === 0) {
-                    listEl.innerHTML = `<div class="text-center py-20 text-gray-400 text-sm">仓库空空如也</div>`;
-                    return;
-                }
-
-                listEl.innerHTML = validFiles.map(file => {
-                    const rawUrl = `https://huggingface.co/datasets/${HF_USER}/${HF_REPO}/resolve/main/${file.path}`;
-                    const size = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-                    return `
-                        <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-50 flex items-center justify-between">
-                            <div class="flex-1 min-w-0 pr-4">
-                                <h3 class="text-gray-800 font-bold text-sm truncate">${file.path}</h3>
-                                <p class="text-[10px] text-gray-400 mt-1 uppercase tracking-tighter">${size}</p>
-                            </div>
-                            <button onclick="copyLink('${rawUrl}')" class="bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 active:scale-95 transition shadow-lg shadow-blue-100">
-                                分享
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-            } catch (err) {
-                listEl.innerHTML = `<p class="text-red-500 text-center py-20 text-xs">${err.message}</p>`;
-            }
-        }
-
-        // === 2. 上传逻辑 (支持大文件流) ===
         async function handleUpload() {
-            const picker = document.getElementById('filePicker');
-            const file = picker.files[0];
+            const file = document.getElementById('fileInput').files[0];
+            // 直接从隐藏输入框读取你预填的信息
+            const token = document.getElementById('gh_token').value.trim();
+            const repo = document.getElementById('repo_path').value.trim();
+
             if (!file) return;
 
-            const box = document.getElementById('uploadBox');
-            const bar = document.getElementById('progressBar');
-            const info = document.getElementById('uploadInfo');
-            const pct = document.getElementById('percentText');
-
-            box.classList.remove('hidden');
-            info.innerText = "正在推送到 Hugging Face...";
+            // UI 切换
+            const status = document.getElementById('statusMsg');
+            const pArea = document.getElementById('progressArea');
+            const pBar = document.getElementById('progressBar');
+            const resultArea = document.getElementById('resultArea');
+            
+            pArea.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+            status.innerText = "正在创建云端节点...";
 
             try {
-                // 使用 XMLHttpRequest 来获取上传进度
-                const xhr = new XMLHttpRequest();
-                const uploadUrl = `https://huggingface.co/api/datasets/${HF_USER}/${HF_REPO}/upload/main/${file.name}`;
-                
-                xhr.open('POST', uploadUrl, true);
-                xhr.setRequestHeader('Authorization', `Bearer ${HF_TOKEN}`);
+                // 1. 创建 Release 节点
+                const tagName = 'file_' + Date.now();
+                const createRes = await fetch(`https://api.github.com/repos/${repo}/releases`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        tag_name: tagName,
+                        name: file.name,
+                        body: `Uploaded via Web on ${new Date().toLocaleString()}`,
+                        draft: false,
+                        prerelease: false
+                    })
+                });
 
-                // 进度监听
+                if (createRes.status === 401) throw new Error("Token 无效或已过期");
+                if (createRes.status === 404) throw new Error("找不到仓库 (请检查仓库名或Token权限)");
+                if (!createRes.ok) throw new Error("创建节点失败");
+
+                const releaseData = await createRes.json();
+                const uploadUrl = releaseData.upload_url.split('{')[0] + `?name=${encodeURIComponent(file.name)}`;
+
+                // 2. 上传文件
+                status.innerText = "🚀 正在极速上传...";
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', uploadUrl, true);
+                xhr.setRequestHeader('Authorization', `token ${token}`);
+                xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
-                        const progress = Math.round((e.loaded / e.total) * 100);
-                        bar.style.width = progress + '%';
-                        pct.innerText = progress + '%';
+                        const p = Math.round((e.loaded / e.total) * 100);
+                        pBar.style.width = p + '%';
+                        document.getElementById('percent').innerText = p + '%';
+                        document.getElementById('speed').innerText = `已传 ${(e.loaded/1024/1024).toFixed(1)} MB`;
                     }
                 };
 
                 xhr.onload = () => {
-                    if (xhr.status === 200 || xhr.status === 201) {
-                        showToast("✅ 上传成功！");
-                        setTimeout(() => {
-                            box.classList.add('hidden');
-                            loadFileList();
-                        }, 1000);
+                    if (xhr.status === 201) {
+                        status.innerText = "✅ 上传完成";
+                        // 生成 ghproxy 加速链接
+                        const rawUrl = `https://github.com/${repo}/releases/download/${tagName}/${encodeURIComponent(file.name)}`;
+                        const fastUrl = `https://ghproxy.cn/${rawUrl}`;
+                        
+                        document.getElementById('finalLink').value = fastUrl;
+                        resultArea.classList.remove('hidden');
+                        pArea.classList.add('hidden');
+                        
+                        // 清空文件框，方便下次上传
+                        document.getElementById('fileInput').value = '';
                     } else {
-                        alert("上传失败：" + xhr.responseText);
+                        throw new Error("上传中断: " + xhr.responseText);
                     }
                 };
 
+                xhr.onerror = () => { throw new Error("网络连接失败"); };
                 xhr.send(file);
+
             } catch (err) {
-                alert("发生错误：" + err.message);
+                alert("❌ 错误: " + err.message);
+                pArea.classList.add('hidden');
+                status.innerText = "点击重试";
             }
         }
 
-        // === 3. 复制链接 (包含镜像加速逻辑) ===
-        function copyLink(url) {
-            let finalUrl = url;
-            // 如果开启了加速，替换域名为国内镜像站
-            if (document.getElementById('useMirror').checked) {
-                finalUrl = url.replace('huggingface.co', 'hf-mirror.com');
-            }
-
-            const el = document.createElement('textarea');
-            el.value = finalUrl;
-            document.body.appendChild(el);
-            el.select();
+        function copyLink() {
+            const input = document.getElementById('finalLink');
+            input.select();
             document.execCommand('copy');
-            document.body.removeChild(el);
-            showToast("🔗 链接已复制（已加速）");
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg;
-            t.classList.remove('hidden');
-            setTimeout(() => t.classList.add('hidden'), 2500);
+            alert('已复制加速链接！');
         }
     </script>
 </body>
